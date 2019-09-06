@@ -1,23 +1,32 @@
 USER=
 PASSWORD=
 
+ASMCWD=$(dirname $1)
+
+echo [$ASMCWD]
+
 echo Logging in and starting job...
 
-ftp -nv zos.kctr.marist.edu > ./out <<EOF
+ftp -nv zos.kctr.marist.edu > $ASMCWD/out <<EOF
 user $USER $PASSWORD
 quote site filetype=jes
 put $1
 quit
 EOF
 
-JOB=$(cat ./out | grep -oP '(JOB[0-9])\w+' | head -1)
+JOB=$(cat $ASMCWD/out | grep -oP '(JOB[0-9])\w+' | head -1)
 
-echo Job created! ID is $JOB
+if [ -z "$JOB" ]
+then
+    echo "Something terrible went wrong, and the job wasn't sumbitted right."
+    exit
+else
+    echo Job created! ID is $JOB
+fi
 
-echo Let\'s give it a sec to run...
 sleep 2
 
-ftp -nv zos.kctr.marist.edu >> ./out <<EOF
+ftp -nv zos.kctr.marist.edu >> $ASMCWD/out << EOF
 user $USER $PASSWORD
 quote site filetype=jes
 get $JOB
@@ -25,8 +34,10 @@ delete $JOB
 quit
 EOF
 
-cat ./$JOB > $1-out.txt
-
-rm -rf ./$JOB ./out
-
+#cat $JOB
+mv $JOB $ASMCWD/$JOB
+cat $ASMCWD/$JOB > $1-out.txt
+rm $ASMCWD/$JOB
+rm $ASMCWD/out
 echo Done.
+
